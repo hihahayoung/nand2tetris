@@ -7,14 +7,12 @@ class Assembler:
         self.file = open(os.path.join(self.__location__, inputAsm))
         self.symbol_table = {}
 
-
     class Parser:
         def __init__(self):
             self.current_line = 0
             self.total_lines = self.file.readlines()
             self.current_text = ""
         
-
         def has_more_lines(self):
             next_line = self.total_lines[self.current_line+1]
             if next_line:
@@ -25,4 +23,31 @@ class Assembler:
         def advance(self):
             self.current_line += 1
             self.current_text = self.total_lines[self.current_line]
+
+        def instructionType(self):
+            if self.current_text[0] == '@':
+                return 'A'
+            elif self.current_text[0] == '(':
+                return 'L'
+            else:
+                return 'C'
+            
+        def symbol(self):
+            if self.current_text[0] == '@':
+                return self.current_text[1:]
+            elif self.current_text[0] == '(':
+                return self.current_text[1:-2]
+            
+        def dest(self):
+            if self.instructionType() == 'C':
+                index = self.current_text.find('=')
+                if index != -1:
+                    
+
+
+
+
+
+ 
+                
 
