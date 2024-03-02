@@ -33,15 +33,31 @@ class Assembler:
                 return 'C'
             
         def symbol(self):
-            if self.current_text[0] == '@':
+            if self.instructionType() == 'A':
                 return self.current_text[1:]
-            elif self.current_text[0] == '(':
-                return self.current_text[1:-2]
+            elif self.instructionType() == 'L':
+                return self.current_text[1:-1]
             
         def dest(self):
             if self.instructionType() == 'C':
                 index = self.current_text.find('=')
                 if index != -1:
+                    return self.current_text[:index]
+                
+        def comp(self):
+            if self.instructionType() == 'C':
+                if self.dest() != None:
+                    dest_index = self.current_text.find('=')
+                    comp_index = self.current_text.find(';')
+                    return self.current_text[dest_index+1:comp_index]
+                
+        def jump(self):
+            if self.instructionType() == 'C':
+                comp_index = self.current_text.find(';')
+                return self.current_text[comp_index+1:]
+
+
+
                     
 
 
