@@ -3,29 +3,38 @@ import os
 class Assembler:
     def __init__(self, inputAsm):
         self.__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+        self.path = os.path.join(self.__location__, inputAsm)
         self.file = open(os.path.join(self.__location__, inputAsm))
 
     class Parser:
-        def __init__(self):
+        def __init__(self, file):
             self.current_line = 0
-            self.total_lines = self.file.readlines()
-            self.current_text = ""
+            self.total_lines = file.readlines()
+            self.current_text = self.total_lines[self.current_line]
+            self.symbol_address = 0
         
         def has_more_lines(self):
-            next_line = self.total_lines[self.current_line+1]
-            if next_line:
-                return True
-            else:
+            try:
+                next_line = self.total_lines[self.current_line+1]
+                if next_line:
+                    return True
+            except:
                 return False
             
         def advance(self):
-            self.current_line += 1
-            self.current_text = self.total_lines[self.current_line]
 
             # Handle pseudocodes and blank lines
-            if self.current_text.strip() == "" or self.current_text.index("//") != None:
+            if self.current_text.strip() == "" or self.current_text.find("//") != -1:
                 self.current_line += 1
                 self.current_text = self.total_lines[self.current_line]
+
+            else:
+                self.current_line += 1
+                self.current_text = self.total_lines[self.current_line]
+                
+                # The symbol address doesn't increase when the instruction is L type
+                if self.current_text[0] != '(':
+                    self.symbol_address += 1
 
         def instructionType(self):
             if self.current_text[0] == '@':
@@ -39,7 +48,7 @@ class Assembler:
             if self.instructionType() == 'A':
                 return self.current_text[1:]
             elif self.instructionType() == 'L':
-                return self.current_text[1:-1]
+                return self.current_text[1:-2]
             
         def dest(self):
             if self.instructionType() == 'C':
@@ -135,16 +144,17 @@ class Assembler:
             if symbol in self.symbol_table:
                 return self.symbol_table[symbol]
 
+assembler = Assembler("max/Max.asm")
+parser = assembler.Parser(assembler.file)
+code = assembler.Code()
+symbolTable = assembler.symbolTable()
 
+# Pass 1
 
+for i in range(len(parser.total_lines)):
+    if parser.instructionType() == 'L':
+        symbolTable.addEntry(parser.symbol(), parser.symbol_address+1)
+    if parser.has_more_lines():
+        parser.advance()
 
-
-                    
-
-
-
-
-
- 
-                
-
+print(symbolTable.symbol_table)
