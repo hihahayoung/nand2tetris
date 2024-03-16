@@ -4,7 +4,6 @@ class Assembler:
     def __init__(self, inputAsm):
         self.__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
         self.file = open(os.path.join(self.__location__, inputAsm))
-        self.symbol_table = {}
 
     class Parser:
         def __init__(self):
@@ -61,7 +60,6 @@ class Assembler:
                 return self.current_text[comp_index+1:]
 
     class Code:
-
         def dest(str):
             destMap = {'null':'000', 
                        'M':'001', 
@@ -117,6 +115,27 @@ class Assembler:
                         'JLE': '110', 
                         'JMP': '111'
                         }
+            if str in jumpMap:
+                return jumpMap[str]
+            
+    class symbolTable:
+        def __init__(self):
+            self.symbol_table = {}
+
+        def addEntry(self, symbol, address):
+            self.symbol_table[symbol] = address
+
+        def contains(self, symbol):
+            if symbol in self.symbol_table:
+                return True
+            else:
+                return False
+            
+        def getAddress(self, symbol):
+            if symbol in self.symbol_table:
+                return self.symbol_table[symbol]
+
+
 
 
 
