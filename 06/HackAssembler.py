@@ -5,13 +5,15 @@ class Assembler:
         self.__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
         self.path = os.path.join(self.__location__, inputAsm)
         self.file = open(os.path.join(self.__location__, inputAsm))
+        self.output = ""
 
     class Parser:
         def __init__(self, file):
             self.current_line = 0
             self.total_lines = file.readlines()
-            self.current_text = self.total_lines[self.current_line]
+            self.current_text = self.total_lines[self.current_line].strip()
             self.symbol_address = 0
+            self.ram_address = 15
         
         def has_more_lines(self):
             try:
@@ -24,52 +26,70 @@ class Assembler:
         def advance(self):
 
             # Handle pseudocodes and blank lines
-            if self.current_text.strip() == "" or self.current_text.find("//") != -1:
+            if self.current_text == '\n' or self.current_text.find("//") != -1 or self.current_text == '':
                 self.current_line += 1
-                self.current_text = self.total_lines[self.current_line]
+                self.current_text = self.total_lines[self.current_line].strip()
 
             else:
                 self.current_line += 1
-                self.current_text = self.total_lines[self.current_line]
+                self.current_text = self.total_lines[self.current_line].strip()
                 
                 # The symbol address doesn't increase when the instruction is L type
                 if self.current_text[0] != '(':
                     self.symbol_address += 1
 
         def instructionType(self):
-            if self.current_text[0] == '@':
-                return 'A'
-            elif self.current_text[0] == '(':
-                return 'L'
-            else:
-                return 'C'
+            if self.current_text != '\n' and self.current_text.find("//") == -1 and self.current_text != '':
+                if self.current_text[0] == '@':
+                    return 'A'
+                elif self.current_text[0] == '(':
+                    return 'L'
+                else:
+                    return 'C'
             
         def symbol(self):
             if self.instructionType() == 'A':
-                return self.current_text[1:]
+                index = self.current_text.find('\n')
+                if index != -1:
+                    return self.current_text[1:index]
+                else:
+                    return self.current_text[1:]
             elif self.instructionType() == 'L':
-                return self.current_text[1:-2]
+                index = self.current_text.find(')')
+                return self.current_text[1:index]
             
         def dest(self):
             if self.instructionType() == 'C':
                 index = self.current_text.find('=')
                 if index != -1:
                     return self.current_text[:index]
+                else:
+                    return 'null'
                 
         def comp(self):
             if self.instructionType() == 'C':
                 if self.dest() != None:
                     dest_index = self.current_text.find('=')
                     comp_index = self.current_text.find(';')
-                    return self.current_text[dest_index+1:comp_index]
+                    if dest_index != -1 and comp_index != -1:
+                        return self.current_text[dest_index+1:comp_index]
+                    elif dest_index != -1 and comp_index == -1:
+                        return self.current_text[dest_index+1:]
+                    elif dest_index == -1 and comp_index != -1:
+                        return self.current_text[:comp_index]
+                    else:
+                        return self.current_text
                 
         def jump(self):
             if self.instructionType() == 'C':
                 comp_index = self.current_text.find(';')
-                return self.current_text[comp_index+1:]
-
+                if comp_index != -1:
+                    return self.current_text[comp_index+1:]
+                else:
+                    return 'null'
+                
     class Code:
-        def dest(str):
+        def dest(self, str):
             destMap = {'null':'000', 
                        'M':'001', 
                        'D':'010', 
@@ -80,8 +100,10 @@ class Assembler:
                        'ADM':'111'}
             if str in destMap:
                 return destMap[str]
+            else:
+                return destMap['null']
             
-        def comp(str):
+        def comp(self, str):
             compMap = {'0': '0101010', 
                        '1': '0111111', 
                        '-1': '0111010', 
@@ -114,7 +136,7 @@ class Assembler:
             if str in compMap:
                 return compMap[str]
 
-        def jump(str):
+        def jump(self, str):
             jumpMap = {'null': '000', 
                         'JGT': '001', 
                         'JEQ': '010', 
@@ -126,6 +148,8 @@ class Assembler:
                         }
             if str in jumpMap:
                 return jumpMap[str]
+            else:
+                return jumpMap['null']
             
     class symbolTable:
         def __init__(self):
@@ -168,17 +192,48 @@ class Assembler:
             if symbol in self.symbol_table:
                 return self.symbol_table[symbol]
 
-assembler = Assembler("max/Max.asm")
+assembler = Assembler("add/Add.asm")
 parser = assembler.Parser(assembler.file)
 code = assembler.Code()
 symbolTable = assembler.symbolTable()
 
 # Pass 1
-
 for i in range(len(parser.total_lines)):
     if parser.instructionType() == 'L':
         symbolTable.addEntry(parser.symbol(), parser.symbol_address+1)
     if parser.has_more_lines():
         parser.advance()
 
+
+# Pass 2
+parser.current_line = 0
+parser.current_text = parser.total_lines[parser.current_line].strip()
+
+for i in range(len(parser.total_lines)):
+    if parser.instructionType() == 'A':
+        if parser.symbol() in symbolTable.symbol_table:
+            number = symbolTable.symbol_table[parser.symbol()]
+        elif parser.symbol().isnumeric():
+            number = int(parser.symbol())
+        else:
+            symbolTable.addEntry(parser.symbol(), parser.ram_address+1)
+            parser.ram_address += 1
+            number = symbolTable.symbol_table[parser.symbol()]
+        current_output = bin(number)[2:].zfill(16) + '\n'
+        assembler.output += current_output
+
+    if parser.instructionType() == 'C':
+        baseline = '111'
+        dest = parser.dest()
+        comp = parser.comp()
+        jump = parser.jump()
+        current_output = baseline + code.comp(comp) + code.dest(dest) + code.jump(jump) + '\n'
+        assembler.output += current_output
+        
+    if parser.has_more_lines():
+        parser.advance()
+        
+
+
 print(symbolTable.symbol_table)
+print(assembler.output)
