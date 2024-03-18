@@ -192,7 +192,7 @@ class Assembler:
             if symbol in self.symbol_table:
                 return self.symbol_table[symbol]
 
-assembler = Assembler("add/Add.asm")
+assembler = Assembler("rect/RectL.asm")
 parser = assembler.Parser(assembler.file)
 code = assembler.Code()
 symbolTable = assembler.symbolTable()
@@ -203,7 +203,6 @@ for i in range(len(parser.total_lines)):
         symbolTable.addEntry(parser.symbol(), parser.symbol_address+1)
     if parser.has_more_lines():
         parser.advance()
-
 
 # Pass 2
 parser.current_line = 0
@@ -233,7 +232,8 @@ for i in range(len(parser.total_lines)):
     if parser.has_more_lines():
         parser.advance()
         
-
+with open('RectL.hack', 'w') as file:
+    file.write(assembler.output)
 
 print(symbolTable.symbol_table)
 print(assembler.output)
